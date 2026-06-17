@@ -1,0 +1,28 @@
+name: Run Discord Music Bot
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows you to start it manually via a button
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js system environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download system-native audio decoding packages
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install package dependencies
+        run: npm install
+
+      - name: Execute script execution loop
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        run: node index.js
