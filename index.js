@@ -1,24 +1,23 @@
 const http = require('http');
-const https = require('https');
-
 http.createServer((req, res) => res.end('Bot is alive!')).listen(process.env.PORT || 3000);
 setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('https://', '')}`), 600000);
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
+const ytdl = require('ytdl-core'); // Switched to the official YouTube downloader engine
 
+// Credentials and YouTube Video Configuration
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://smoothjazz.cdnstream1.com/2585_128.mp3";
+const YOUTUBE_URL = "https://www.youtube.com/watch?v=jj0ChLVTpaA"; // Your jazzy elevator music video
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages],
-    rest: { timeout: 60000 }
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages]
 });
 
 client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}! Initializing loop...`);
+    console.log(`Logged in as ${client.user.tag}! Initializing YouTube engine...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
@@ -31,50 +30,35 @@ client.once('ready', async () => {
     });
 
     const player = createAudioPlayer({
-        behaviors: {
-            noSubscriber: 'pause'
-        }
+        behaviors: { noSubscriber: 'pause' }
     });
     connection.subscribe(player);
 
     async function playStream() {
-        https.get(YOUTUBE_URL, (res) => {
-            const resource = createAudioResource(res, { inputType: StreamType.Arbitrary });
+        try {
+            // Scrape and extract only the audio layer directly from the YouTube link
+            const stream = ytdl(YOUTUBE_URL, { 
+                filter: 'audioonly', 
+                highWaterMark: 1 << 25,
+                liveBuffer: 40000
+            });
+            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
             player.play(resource);
-        }).on('error', (error) => {
-            console.error("Stream network error, retrying...", error);
+        } catch (error) {
+            console.error("YouTube stream error, retrying...", error);
             setTimeout(playStream, 5000);
-        });
+        }
     }
 
-    // Fix: Force the connection network pipe open the millisecond it links
-    connection.on(VoiceConnectionStatus.Ready, () => {
-        console.log("Voice pipe connection securely opened. Activating stream...");
-        playStream();
-    });
-
-    // Auto-reconnect if cloud hosting drops packages
-    connection.on(VoiceConnectionStatus.Disconnected, async () => {
-        try {
-            await Promise.race([
-                entersState(connection, VoiceConnectionStatus.Signalling, 5000),
-                entersState(connection, VoiceConnectionStatus.Connecting, 5000),
-            ]);
-        } catch (error) {
-            console.log("Network change detected. Forcing reconnection...");
-            connection.destroy();
-            // Re-join cleanly
-            const newConn = joinVoiceChannel({ channelId: VC_ID, guildId: SERVER_ID, adapterCreator: guild.voiceAdapterCreator, selfDeaf: true });
-            newConn.subscribe(player);
-        }
-    });
-
+    // Automatically loop when the 1-hour video ends
     player.on(AudioPlayerStatus.Idle, () => {
-        console.log("Track disconnected. Restarting stream...");
+        console.log("Video finished. Restarting YouTube loop...");
         playStream();
     });
 
     player.on('error', error => console.error(`Player error: ${error.message}`));
+
+    await playStream();
 });
 
 client.login(TOKEN);
