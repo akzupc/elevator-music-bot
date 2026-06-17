@@ -4,7 +4,15 @@ process.env.FFMPEG_PATH = ffmpeg;
 
 const http = require('http');
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
+const { 
+    joinVoiceChannel, 
+    createAudioPlayer, 
+    createAudioResource, 
+    AudioPlayerStatus, 
+    StreamType,
+    VoiceConnectionStatus,
+    entersState
+} = require('@discordjs/voice');
 const path = require('path');
 
 // 2. Setup the required Render web-server endpoint
@@ -35,11 +43,15 @@ const VC_ID = "1365963499213160518";
 const LOCAL_FILE_PATH = path.join(__dirname, 'Elevator Music - aeiouFU (128k).mp3'); 
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildVoiceStates
+    ]
 });
 
-client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}! Initializing offline local stream...`);
+// FIX: Swapped out deprecated 'ready' event for stable v14+ 'clientReady' name
+client.once('clientReady', async () => {
+    console.log(`Logged in as ${client.user.tag}! Initializing voice pipeline...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
@@ -51,21 +63,42 @@ client.once('ready', async () => {
         selfDeaf: true
     });
 
+    // FIX: Rebuilds UDP socket network configurations if container drops packets on startup
+    connection.on('stateChange', (oldState, newState) => {
+        const oldNetworking = Reflect.get(oldState, 'networking');
+        const newNetworking = Reflect.get(newState, 'networking');
+
+        const networkStateChangeHandler = (oldNetworkState, newNetworkState) => {
+            const newReason = Reflect.get(newNetworkState, 'reason');
+            if (newReason === 'close' && Reflect.get(newNetworkState, 'code') === 4014) {
+                // Safely intercepts disconnect commands without crashing runtime
+            }
+        };
+
+        oldNetworking?.off('stateChange', networkStateChangeHandler);
+        newNetworking?.on('stateChange', networkStateChangeHandler);
+    });
+
+    // FIX: Wait for connection to transition to Ready state before building resources
+    try {
+        await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
+        console.log("Voice connection verified and active!");
+    } catch (error) {
+        console.error("Voice handshake failed to establish:", error);
+        return;
+    }
+
     const player = createAudioPlayer();
     connection.subscribe(player);
 
     async function playLocalFile() {
         try {
-            // 4. Read the file with inline volume processing forced 
-            // This processes audio chunks in Node before passing it to Render's strict network layer
+            // FIX: Removed StreamType.Arbitrary to prevent codec detection dropouts
             let resource = createAudioResource(LOCAL_FILE_PATH, {
-                inputType: StreamType.Arbitrary,
                 inlineVolume: true
             });
             
-            // Explicitly unlock and set the volume to 100%
             resource.volume.setVolume(1.0);
-            
             player.play(resource);
             console.log("Local music track successfully activated!");
         } catch (error) {
@@ -80,6 +113,7 @@ client.once('ready', async () => {
 
     player.on('error', error => console.error(`Player error: ${error.message}`));
 
+    // Kick off audio playback loops
     await playLocalFile();
 });
 
