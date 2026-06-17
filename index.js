@@ -9,7 +9,7 @@ const play = require('play-dl');
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://www.youtube.com/watch?v=DiaLMuUQYaw"; // Your 1 hour elevator music video
+const YOUTUBE_URL = "https://archive.org/download/smooth-jazz-background-music-for-videos-1-hour/Smooth%20Jazz%20Background%20Music%20for%20Videos%20-%201%20Hour.mp3";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages]
@@ -31,11 +31,10 @@ client.once('ready', async () => {
     const player = createAudioPlayer();
     connection.subscribe(player);
 
-    async function playStream() {
+        async function playStream() {
         try {
-            // Fetch stream directly from YouTube
-            let stream = await play.stream(YOUTUBE_URL, { quality: 0 });
-            let resource = createAudioResource(stream.stream, { inputType: stream.type });
+            // Stream the raw jazz MP3 directly into the voice channel
+            let resource = createAudioResource(YOUTUBE_URL);
             player.play(resource);
         } catch (error) {
             console.error("Stream error, retrying...", error);
