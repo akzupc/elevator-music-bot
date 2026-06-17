@@ -13,7 +13,8 @@ const VC_ID = "1365963499213160518";
 const YOUTUBE_URL = "https://jazz.fm";
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages],
+    rest: { timeout: 60000 } // Gives the network plenty of time to clear firewalls
 });
 
 client.once('ready', async () => {
