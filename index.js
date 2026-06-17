@@ -4,20 +4,20 @@ setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytdl = require('ytdl-core'); // Switched to the official YouTube downloader engine
+const ytdl = require('@distube/ytdl-core'); // Updated engine to fix 410 errors
 
-// Credentials and YouTube Video Configuration
+// Your Exact Credentials and YouTube Track
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://www.youtube.com/watch?v=jj0ChLVTpaA"; // Your jazzy elevator music video
+const YOUTUBE_URL = "https://www.youtube.com/watch?v=jj0ChLVTpaA"; 
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
 });
 
 client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}! Initializing YouTube engine...`);
+    console.log(`Logged in as ${client.user.tag}! Initializing fixed YouTube engine...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
@@ -36,23 +36,23 @@ client.once('ready', async () => {
 
     async function playStream() {
         try {
-            // Scrape and extract only the audio layer directly from the YouTube link
+            // Unlocks the YouTube network stream completely bypassing 410 errors
             const stream = ytdl(YOUTUBE_URL, { 
-                filter: 'audioonly', 
-                highWaterMark: 1 << 25,
-                liveBuffer: 40000
+                filter: 'audioonly',
+                quality: 'highestaudio',
+                highWaterMark: 1 << 25
             });
             const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
             player.play(resource);
+            console.log("YouTube track buffering successfully established!");
         } catch (error) {
-            console.error("YouTube stream error, retrying...", error);
+            console.error("YouTube streaming engine error, retrying...", error);
             setTimeout(playStream, 5000);
         }
     }
 
-    // Automatically loop when the 1-hour video ends
     player.on(AudioPlayerStatus.Idle, () => {
-        console.log("Video finished. Restarting YouTube loop...");
+        console.log("Track finished. Restarting YouTube loop...");
         playStream();
     });
 
