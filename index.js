@@ -10,7 +10,7 @@ const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerSta
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://jazz.fm";
+const YOUTUBE_URL = "https://smoothjazz.cdnstream1.com/2585_128.mp3";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages],
