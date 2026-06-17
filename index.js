@@ -3,7 +3,7 @@ const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerSta
 const play = require('play-dl');
 
 // Paste your exact credentials inside the quotes below:
-const TOKEN = "MTUxNjg2NDkxMzc5NTE5MDk1NQ.GTEfB8.YUMNgRGvQFuOL9nJUlPp36jKCPzd6iioUyNlmc"; 
+const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
 const YOUTUBE_URL = "https://www.youtube.com/watch?v=DiaLMuUQYaw"; // Your 1 hour elevator music video
