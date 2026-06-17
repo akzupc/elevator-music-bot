@@ -1,94 +1,47 @@
-// 1. Force the environment to locate the static FFmpeg binary immediately
 const ffmpeg = require('ffmpeg-static');
 process.env.FFMPEG_PATH = ffmpeg;
 
-const http = require('http');
 const { Client, GatewayIntentBits } = require('discord.js');
-const { 
-    joinVoiceChannel, 
-    createAudioPlayer, 
-    createAudioResource, 
-    AudioPlayerStatus, 
-    VoiceConnectionStatus,
-    entersState
-} = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const path = require('path');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-
 const LOCAL_FILE_PATH = path.join(__dirname, 'Elevator Music - aeiouFU (128k).mp3'); 
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildVoiceStates
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
 });
 
 client.once('clientReady', async () => {
-    console.log(`Logged in as ${client.user.tag}! Initializing voice pipeline...`);
+    console.log(`Logged in as ${client.user.tag}! Audio system initializing...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
 
-    // FIXED BLOCK: Added 'group' to bypass shared container firewall traffic blocks
     const connection = joinVoiceChannel({
         channelId: VC_ID,
         guildId: SERVER_ID,
         adapterCreator: guild.voiceAdapterCreator,
-        selfDeaf: true,
-        group: client.user.id
+        selfDeaf: true
     });
-
-    connection.on('stateChange', (oldState, newState) => {
-        const oldNetworking = Reflect.get(oldState, 'networking');
-        const newNetworking = Reflect.get(newState, 'networking');
-
-        const networkStateChangeHandler = (oldNetworkState, newNetworkState) => {
-            const newReason = Reflect.get(newNetworkState, 'reason');
-            if (newReason === 'close' && Reflect.get(newNetworkState, 'code') === 4014) {
-                // Safely handles disconnects
-            }
-        };
-
-        oldNetworking?.off('stateChange', networkStateChangeHandler);
-        newNetworking?.on('stateChange', networkStateChangeHandler);
-    });
-
-    try {
-        console.log("Attempting standard voice handshake...");
-        await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
-        console.log("Voice connection verified and active natively!");
-    } catch (error) {
-        console.log("Handshake timed out via network layers. Forcing audio stream pipeline anyway...");
-    }
 
     const player = createAudioPlayer();
     connection.subscribe(player);
 
     async function playLocalFile() {
         try {
-            let resource = createAudioResource(LOCAL_FILE_PATH, {
-                inlineVolume: true
-            });
-            
+            let resource = createAudioResource(LOCAL_FILE_PATH, { inlineVolume: true });
             resource.volume.setVolume(1.0);
             player.play(resource);
-            console.log("Local music track successfully activated!");
+            console.log("Audio pipeline broadcasting successfully!");
         } catch (error) {
-            console.error("Local playback engine error:", error);
+            console.error("Playback engine failure:", error);
         }
     }
 
-    player.on(AudioPlayerStatus.Idle, () => {
-        console.log("Track finished. Restarting local loop...");
-        playLocalFile();
-    });
-
-    player.on('error', error => console.error(`Player error: ${error.message}`));
-
+    player.on(AudioPlayerStatus.Idle, () => playLocalFile());
     await playLocalFile();
 });
 
