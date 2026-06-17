@@ -27,21 +27,21 @@ const client = new Client({
     ]
 });
 
-// NEW FIXED CODESPACE BLOCK STARTS HERE
 client.once('clientReady', async () => {
     console.log(`Logged in as ${client.user.tag}! Initializing voice pipeline...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
 
+    // FIXED BLOCK: Added 'group' to bypass shared container firewall traffic blocks
     const connection = joinVoiceChannel({
         channelId: VC_ID,
         guildId: SERVER_ID,
         adapterCreator: guild.voiceAdapterCreator,
-        selfDeaf: true
+        selfDeaf: true,
+        group: client.user.id
     });
 
-    // FORCE HANDSHAKE FALLBACK (Fixes Pterodactyl/Docker container UDP drops)
     connection.on('stateChange', (oldState, newState) => {
         const oldNetworking = Reflect.get(oldState, 'networking');
         const newNetworking = Reflect.get(newState, 'networking');
@@ -57,8 +57,6 @@ client.once('clientReady', async () => {
         newNetworking?.on('stateChange', networkStateChangeHandler);
     });
 
-    // BYPASS HANDSHAKE WAITING FOR CONTAINERS
-    // Instead of crashing on timeout, we jump straight to setting up the audio player
     try {
         console.log("Attempting standard voice handshake...");
         await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
@@ -93,6 +91,5 @@ client.once('clientReady', async () => {
 
     await playLocalFile();
 });
-// NEW FIXED CODESPACE BLOCK ENDS HERE
 
 client.login(TOKEN);
