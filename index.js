@@ -39,7 +39,7 @@ client.once('ready', async () => {
     async function playStream() {
         try {
             // Stream the raw jazz MP3 directly into the voice channel
-            let resource = createAudioResource(YOUTUBE_URL);
+            let resource = createAudioResource(YOUTUBE_URL, { inputType: StreamType.Arbitrary });
             player.play(resource);
         } catch (error) {
             console.error("Stream error, retrying...", error);
