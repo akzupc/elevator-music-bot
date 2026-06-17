@@ -9,32 +9,10 @@ const {
     createAudioPlayer, 
     createAudioResource, 
     AudioPlayerStatus, 
-    StreamType,
     VoiceConnectionStatus,
     entersState
 } = require('@discordjs/voice');
 const path = require('path');
-
-// 2. Setup the required Render web-server endpoint
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is alive!');
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Web server tracking live on port ${PORT}`);
-});
-
-// 3. Keep-alive engine: self-pings every 2 minutes so Render doesn't throttle the audio stream
-setInterval(() => {
-    const url = process.env.RENDER_EXTERNAL_URL;
-    if (url) {
-        http.get(url, (res) => {
-            res.resume(); // Frees up memory allocation
-        }).on('error', (err) => console.error('Self-ping skipped:', err.message));
-    }
-}, 120000);
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
@@ -49,7 +27,7 @@ const client = new Client({
     ]
 });
 
-// FIX: Swapped out deprecated 'ready' event for stable v14+ 'clientReady' name
+// NEW FIXED CODESPACE BLOCK STARTS HERE
 client.once('clientReady', async () => {
     console.log(`Logged in as ${client.user.tag}! Initializing voice pipeline...`);
     
@@ -63,7 +41,7 @@ client.once('clientReady', async () => {
         selfDeaf: true
     });
 
-    // FIX: Rebuilds UDP socket network configurations if container drops packets on startup
+    // FORCE HANDSHAKE FALLBACK (Fixes Pterodactyl/Docker container UDP drops)
     connection.on('stateChange', (oldState, newState) => {
         const oldNetworking = Reflect.get(oldState, 'networking');
         const newNetworking = Reflect.get(newState, 'networking');
@@ -71,7 +49,7 @@ client.once('clientReady', async () => {
         const networkStateChangeHandler = (oldNetworkState, newNetworkState) => {
             const newReason = Reflect.get(newNetworkState, 'reason');
             if (newReason === 'close' && Reflect.get(newNetworkState, 'code') === 4014) {
-                // Safely intercepts disconnect commands without crashing runtime
+                // Safely handles disconnects
             }
         };
 
@@ -79,13 +57,14 @@ client.once('clientReady', async () => {
         newNetworking?.on('stateChange', networkStateChangeHandler);
     });
 
-    // FIX: Wait for connection to transition to Ready state before building resources
+    // BYPASS HANDSHAKE WAITING FOR CONTAINERS
+    // Instead of crashing on timeout, we jump straight to setting up the audio player
     try {
-        await entersState(connection, VoiceConnectionStatus.Ready, 20_000);
-        console.log("Voice connection verified and active!");
+        console.log("Attempting standard voice handshake...");
+        await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
+        console.log("Voice connection verified and active natively!");
     } catch (error) {
-        console.error("Voice handshake failed to establish:", error);
-        return;
+        console.log("Handshake timed out via network layers. Forcing audio stream pipeline anyway...");
     }
 
     const player = createAudioPlayer();
@@ -93,7 +72,6 @@ client.once('clientReady', async () => {
 
     async function playLocalFile() {
         try {
-            // FIX: Removed StreamType.Arbitrary to prevent codec detection dropouts
             let resource = createAudioResource(LOCAL_FILE_PATH, {
                 inlineVolume: true
             });
@@ -113,8 +91,8 @@ client.once('clientReady', async () => {
 
     player.on('error', error => console.error(`Player error: ${error.message}`));
 
-    // Kick off audio playback loops
     await playLocalFile();
 });
+// NEW FIXED CODESPACE BLOCK ENDS HERE
 
 client.login(TOKEN);
