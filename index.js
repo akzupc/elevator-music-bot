@@ -3,7 +3,7 @@ http.createServer((req, res) => res.end('Bot is alive!')).listen(process.env.POR
 setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('https://', '')}`), 600000);
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
 const play = require('play-dl');
 
 // Paste your exact credentials inside the quotes below:
@@ -60,4 +60,3 @@ client.once('ready', async () => {
 });
 
 client.login(TOKEN);
-
