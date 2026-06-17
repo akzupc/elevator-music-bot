@@ -3,21 +3,22 @@ http.createServer((req, res) => res.end('Bot is alive!')).listen(process.env.POR
 setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('https://', '')}`), 600000);
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
-const ytdl = require('@distube/ytdl-core'); // Updated engine to fix 410 errors
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const path = require('path');
 
-// Your Exact Credentials and YouTube Track
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://www.youtube.com/watch?v=jj0ChLVTpaA"; 
+
+// Points directly to your uploaded audio file name layout
+const LOCAL_FILE_PATH = path.join(__dirname, 'Elevator Music - aeiouFU (128k).mp3'); 
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
 });
 
 client.once('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}! Initializing fixed YouTube engine...`);
+    console.log(`Logged in as ${client.user.tag}! Initializing offline local stream...`);
     
     const guild = client.guilds.cache.get(SERVER_ID);
     if (!guild) return console.error("Server not found!");
@@ -34,31 +35,25 @@ client.once('ready', async () => {
     });
     connection.subscribe(player);
 
-    async function playStream() {
+    async function playLocalFile() {
         try {
-            // Unlocks the YouTube network stream completely bypassing 410 errors
-            const stream = ytdl(YOUTUBE_URL, { 
-                filter: 'audioonly',
-                quality: 'highestaudio',
-                highWaterMark: 1 << 25
-            });
-            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
+            // Reads the file straight from the server disk with zero network requests
+            let resource = createAudioResource(LOCAL_FILE_PATH);
             player.play(resource);
-            console.log("YouTube track buffering successfully established!");
+            console.log("Local music track successfully activated!");
         } catch (error) {
-            console.error("YouTube streaming engine error, retrying...", error);
-            setTimeout(playStream, 5000);
+            console.error("Local playback engine error:", error);
         }
     }
 
     player.on(AudioPlayerStatus.Idle, () => {
-        console.log("Track finished. Restarting YouTube loop...");
-        playStream();
+        console.log("Track finished. Restarting local loop...");
+        playLocalFile();
     });
 
     player.on('error', error => console.error(`Player error: ${error.message}`));
 
-    await playStream();
+    await playLocalFile();
 });
 
 client.login(TOKEN);
