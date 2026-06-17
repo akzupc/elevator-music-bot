@@ -30,9 +30,7 @@ client.once('ready', async () => {
         selfDeaf: true
     });
 
-    const player = createAudioPlayer({
-        behaviors: { noSubscriber: 'pause' }
-    });
+        const player = createAudioPlayer();
     connection.subscribe(player);
 
     async function playLocalFile() {
