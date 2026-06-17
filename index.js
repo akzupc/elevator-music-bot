@@ -1,16 +1,20 @@
+// 1. ADD THESE TWO LINES AT the VERY TOP of index.js
+const ffmpeg = require('ffmpeg-static');
+process.env.FFMPEG_PATH = ffmpeg;
+
 const http = require('http');
 http.createServer((req, res) => res.end('Bot is alive!')).listen(process.env.PORT || 3000);
 setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('https://', '')}`), 600000);
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+// 2. ADD StreamType to your imports here:
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
 const path = require('path');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
 
-// Points directly to your uploaded audio file name layout
 const LOCAL_FILE_PATH = path.join(__dirname, 'Elevator Music - aeiouFU (128k).mp3'); 
 
 const client = new Client({
@@ -30,13 +34,16 @@ client.once('ready', async () => {
         selfDeaf: true
     });
 
-        const player = createAudioPlayer();
+    const player = createAudioPlayer();
     connection.subscribe(player);
 
     async function playLocalFile() {
         try {
-            // Reads the file straight from the server disk with zero network requests
-            let resource = createAudioResource(LOCAL_FILE_PATH);
+            // 3. UPDATE THIS LINE to explicitly use FFmpeg via Arbitrary Stream Type
+            let resource = createAudioResource(LOCAL_FILE_PATH, {
+                inputType: StreamType.Arbitrary
+            });
+            
             player.play(resource);
             console.log("Local music track successfully activated!");
         } catch (error) {
