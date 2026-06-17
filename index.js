@@ -10,7 +10,7 @@ const play = require('play-dl');
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://archive.org/download/smooth-jazz-background-music-for-videos-1-hour/Smooth%20Jazz%20Background%20Music%20for%20Videos%20-%201%20Hour.mp3";
+const YOUTUBE_URL = "https://jazz.fm";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages]
