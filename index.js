@@ -1,20 +1,20 @@
 const http = require('http');
+const https = require('https'); // Added for processing external audio links cleanly
+
 http.createServer((req, res) => res.end('Bot is alive!')).listen(process.env.PORT || 3000);
 setInterval(() => http.get(`https://${process.env.RENDER_EXTERNAL_URL?.replace('https://', '')}`), 600000);
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, VoiceConnectionStatus } = require('@discordjs/voice');
-const play = require('play-dl');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
 
-// Paste your exact credentials inside the quotes below:
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = "1365789773666582589";
 const VC_ID = "1365963499213160518";
-const YOUTUBE_URL = "https://jazz.fm";
+const YOUTUBE_URL = "https://jazz.fm"; // Active jazz live radio station stream
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessages],
-    rest: { timeout: 60000 } // Gives the network plenty of time to clear firewalls
+    rest: { timeout: 60000 }
 });
 
 client.once('ready', async () => {
@@ -38,25 +38,23 @@ client.once('ready', async () => {
     connection.subscribe(player);
 
     async function playStream() {
-        try {
-            // Stream the raw jazz MP3 directly into the voice channel
-            let resource = createAudioResource(YOUTUBE_URL, { inputType: StreamType.Arbitrary });
+        // Connect directly to the web address and feed the buffer into Discord
+        https.get(YOUTUBE_URL, (res) => {
+            const resource = createAudioResource(res, { inputType: StreamType.Arbitrary });
             player.play(resource);
-        } catch (error) {
-            console.error("Stream error, retrying...", error);
+        }).on('error', (error) => {
+            console.error("Stream network error, retrying...", error);
             setTimeout(playStream, 5000);
-        }
+        });
     }
 
-    // Auto-loop when the video finishes
     player.on(AudioPlayerStatus.Idle, () => {
-        console.log("Track finished. Restarting loop...");
+        console.log("Track disconnected. Restarting stream...");
         playStream();
     });
 
     player.on('error', error => console.error(`Player error: ${error.message}`));
 
-    // Start playing immediately on startup
     await playStream();
 });
 
